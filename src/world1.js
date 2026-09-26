@@ -440,7 +440,7 @@ function sampleG(def, keys, k){
 }
 
 /* ---------- spear animation data ---------- */
-const CH_DEF = { w: 0, tilt: 0, roll: 0, dx: 0, dy: 0, yaw: 0, stretch: 1, glow: 0, pm: 1, speed: 0, power: null, flask: null, arc: 0 };
+const CH_DEF = { w: 0, tilt: 0, roll: 0, dx: 0, dy: 0, yaw: 0, stretch: 1, glow: 0, pm: 1, speed: 0, spin: 0, power: null, flask: null, arc: 0 };
 const prep = keys => prepG(CH_DEF, keys, ['tilt', 'roll', 'power', 'flask']);
 const TAU = Math.PI * 2;
 const ACTIONS = {
@@ -449,10 +449,17 @@ const ACTIONS = {
       { t: 0.33, e: 'out', tilt: -1.56, roll: 0, dx: 0.62, dy: 0, stretch: 1.8, glow: 1.3 },
       { t: 0.5, tilt: -1.54, dx: 0.5, stretch: 1.25, glow: 0.6 }, { t: 1, w: 0, tilt: -1.5, dx: 0, stretch: 1, glow: 0 }]),
     ev: [[0.28, 'trailOn'], [0.33, 'impact'], [0.55, 'trailOff']] },
-  sweep: { label: 'Размах', dur: 0.95,
-    keys: prep([{ t: 0, tilt: -1.57 }, { t: 0.18, w: 1, tilt: -1.62, roll: 0.12, yaw: 0.55, dy: -0.12, stretch: 1.1, glow: 0.3 },
-      { t: 0.68, yaw: 0.55 - TAU, roll: -0.08, stretch: 1.35, glow: 1.1 }, { t: 1, w: 0, yaw: -TAU, roll: 0, dy: 0, stretch: 1, glow: 0 }]),
-    ev: [[0.2, 'trailOn'], [0.45, 'shakeS'], [0.7, 'trailOff']], emit: [0.2, 0.68, 'tip'] },
+  // spin attack (as the charged axe spin in Bloodborne): the whole body turns about the right foot, not the spear about the hand.
+  // coil against the turn -> push off (accelerating) -> constant-speed turn -> overshoot past 360 deg, weight drops -> recover.
+  // 'in' / 'lin' / 'out' segments are sized so the angular speed is continuous (about 2.3 turns/s at the peak).
+  sweep: { label: 'Разворот', dur: 1.4,
+    keys: prep([{ t: 0, tilt: -1.57 },
+      { t: 0.24, w: 1, tilt: -1.5, roll: -0.12, dy: -0.14, spin: 0.5, stretch: 1.05, glow: 0.4 },
+      { t: 0.34, e: 'in', tilt: -1.58, roll: -0.1, spin: -0.17, stretch: 1.2, glow: 0.8 },
+      { t: 0.6, e: 'lin', roll: -0.1, dy: -0.08, spin: -5.38, stretch: 1.4, glow: 1.3 },
+      { t: 0.78, e: 'out', roll: -0.12, dy: -0.16, spin: -6.58, stretch: 1.2, glow: 0.7 },
+      { t: 1, w: 0, roll: 0, dy: 0, spin: -TAU, stretch: 1, glow: 0 }]),
+    ev: [[0.3, 'trailOn'], [0.52, 'shakeS'], [0.8, 'trailOff']], emit: [0.3, 0.78, 'tip'] },
   slide: { label: 'Подкат', dur: 1.0,
     keys: prep([{ t: 0 }, { t: 0.15, e: 'out', w: 1, tilt: -1.32, roll: -0.22, dx: 0.12, dy: -0.6, speed: 7 },
       { t: 0.75, tilt: -1.28, roll: -0.18, dx: 0.18, dy: -0.58, speed: 6 }, { t: 1, w: 0, tilt: -1.1, roll: 0, dx: 0, dy: 0, speed: 0 }]),

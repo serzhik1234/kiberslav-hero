@@ -138,6 +138,8 @@ function gripQuat(axis){
 }
 const wristGuess = new V3(); let wristInit = false;
 const restPivot = new V3();
+const Y_AX = new V3(0, 1, 0), spinC = new V3();
+const SPIN_PIV = (() => { scene.updateMatrixWorld(true); return armPivot.worldToLocal(scene.getObjectByName('RightFoot').getWorldPosition(new V3())); })();   // spin pivot, ArmPivot space
 
 /* ================= FRAME ================= */
 function step(raw){
@@ -157,6 +159,11 @@ function step(raw){
   const w = A ? A.w : 0;
   root.position.set(A ? A.dx : 0, L.y + (A ? A.dy : 0), 0);
   yawG.rotation.y = L.yaw + (A ? A.yaw : 0);
+  const spin = A ? A.spin : 0;
+  if (spin) {   // turn the whole hero (spear root and body) about his right foot
+    spinC.copy(SPIN_PIV).applyAxisAngle(Y_AX, yawG.rotation.y).add(root.position);
+    root.position.sub(spinC).applyAxisAngle(Y_AX, spin).add(spinC); yawG.rotation.y += spin;
+  }
   tiltG.rotation.set(L.roll + (A ? (A.roll - L.roll) * w : 0), 0, L.tilt + (A ? (A.tilt - L.tilt) * w : 0));
 
   // plasma params

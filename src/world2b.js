@@ -227,7 +227,7 @@ const HIP_Y = -0.12;
 const GY = HIP_Y - 0.08 - THIGH * Math.cos(0.17) - KNEE_H;  // ground level in ArmFrame
 const GRIP_H = -GY;                           // grip height above the ground (the spear's rest height in world3)
 const CH_Y0 = -0.3;                           // chest-local height of the belt line
-const CYBER_SH = new V3(0.4, 0.235, 0);      // cyber shoulder joint, chest-local
+const CYBER_SH = new V3(0.4, 0.2, 0);        // cyber shoulder joint, chest-local: level with the right shoulder
 
 /* ---------- skeleton (pivots: head, shoulders, elbows, wrists, hips, knees, ankles) ---------- */
 const hips = hgrp(armFrame, 'Hips', BX, HIP_Y, BZ);
@@ -626,14 +626,19 @@ const LEG_REST = {};
     LEG_REST[side] = { hip: legs[side].up.position.clone(), ank, lift: ank.y - groundLocal };
   }
 })();
-const BODY_DEF = { w: 0, lean: 0, twist: 0, crouch: 0, fl: 0, bl: 0, tuck: 0, arm: 0 };
+const BODY_DEF = { w: 0, lean: 0, twist: 0, crouch: 0, fl: 0, bl: 0, tuck: 0, arm: 0, lift: 0 };
 const bodyKeys = keys => prepG(BODY_DEF, keys);
-const Z0 = { lean: 0, twist: 0, crouch: 0, fl: 0, bl: 0, tuck: 0, arm: 0 };
+const Z0 = { lean: 0, twist: 0, crouch: 0, fl: 0, bl: 0, tuck: 0, arm: 0, lift: 0 };
 const BODY_ACT = {
   // lunge: wind up with the spear shoulder back, then drive it forward with the left foot
   thrust: bodyKeys([{ t: 0 }, { t: 0.25, w: 1, lean: -0.06, twist: 0.2, crouch: 0.3, fl: 0.1, bl: -0.1, arm: 0.3 },
     { t: 0.33, e: 'out', lean: 0.22, twist: -0.22, crouch: 0.5, fl: 0.45, bl: -0.3, arm: 0.5 }, { t: 0.5, lean: 0.18, twist: -0.18 }, Object.assign({ t: 1, w: 0 }, Z0)]),
-  sweep: bodyKeys([{ t: 0 }, { t: 0.18, w: 1, lean: 0.15, crouch: 0.45, fl: 0.2, bl: -0.1, arm: 0.6 }, { t: 0.68, lean: 0.12 }, Object.assign({ t: 1, w: 0 }, Z0)]),
+  // spin: coil (knees loaded, the turn-back itself is the spear's `spin` key) -> pivot on the right foot, the left leg swings round off the ground,
+  // chest leads the spear -> land wide and low on the overshoot -> recover. Right foot stays put: it is the spin pivot.
+  sweep: bodyKeys([{ t: 0 }, { t: 0.24, w: 1, lean: 0.1, twist: -0.1, crouch: 0.5, fl: 0.25, bl: -0.1, arm: 0.5 },
+    { t: 0.34, e: 'in', twist: -0.28, crouch: 0.45, bl: 0, lift: 0.4 },
+    { t: 0.6, e: 'lin', lean: 0.18, twist: -0.38, crouch: 0.35, fl: 0.1, lift: 1, arm: 0.9 },
+    { t: 0.78, e: 'out', lean: 0.22, twist: -0.4, crouch: 0.75, fl: 0.3, bl: -0.2, lift: 0, arm: 0.6 }, Object.assign({ t: 1, w: 0 }, Z0)]),
   // slide: lean back, lead leg out in front, the other folded under
   slide: bodyKeys([{ t: 0 }, { t: 0.15, e: 'out', w: 1, lean: -0.3, fl: 0.55, bl: -0.1, arm: 0.6 }, { t: 0.75 }, Object.assign({ t: 1, w: 0 }, Z0)]),
   jump: bodyKeys([{ t: 0 }, { t: 0.12, w: 0.9, crouch: 0.8, lean: 0.15, arm: 0.2 }, { t: 0.4, e: 'out', w: 1, crouch: 0, tuck: 1, lean: -0.1, arm: 0.7 },
@@ -678,7 +683,7 @@ function animateBody(dt, T, ph, run, act, k){
     const lift = run * Math.max(0, Math.cos(phase)) * 0.2;
     bvT.copy(R.ank);
     bvT.z += 0.3 * run * Math.sin(phase) + 0.6 * (s > 0 ? g('fl') : g('bl'));
-    bvT.y = ground + R.lift + lift;
+    bvT.y = ground + R.lift + lift + (s > 0 ? 0.22 * g('lift') : 0);   // spin: the swinging leg leaves the ground
     if (tuck > 0) bvT.lerp(bvTuck.set(R.hip.x * 1.2, R.hip.y - (THIGH + SHIN) * 0.55, R.hip.z + (s > 0 ? 0.2 : -0.05)), tuck);
     legIK(side, bvT, bvPole.set(s * 0.15, 0, 1).normalize());
     bqFoot.setFromEuler(bE.set(0.5 * tuck + (lift > 0.02 ? 0.35 * lift / 0.2 : 0), s * 0.25, 0, 'YXZ'));

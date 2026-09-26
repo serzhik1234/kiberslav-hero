@@ -19,6 +19,7 @@ renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
 for (const shot of job.shots) {
   s = 1234 + (shot.seed || 0);
   const world = createWorld(THREE, { random: rand, reduceMotion: false });
+  try { world.setEnvironment(renderer); } catch (e) { console.log('no environment:', e.message); }
   world.cam.auto = false;
   world.camera.aspect = W / H;
   if (shot.fov) world.camera.fov = shot.fov;

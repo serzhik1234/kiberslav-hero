@@ -20,9 +20,9 @@ function put(parent, geo, mat, x, y, z){
 function sideD(m){ const c = m.clone(); c.side = THREE.DoubleSide; return c; }
 
 /* ---------- arm materials ---------- */
-const mPlate = std(plateTex(), 0xffffff, 0.42, 0.62); mPlate.map.repeat.set(6, 1);
-const mPlateFlat = std(plateTex(), 0xffffff, 0.42, 0.62);
-const mSteel = std(metalTex(2, 150, 50), 0xffffff, 0.45, 0.6);
+const mPlate = std(plateTex(), 0xffffff, 0.5, 0.38); mPlate.map.repeat.set(6, 1);
+const mPlateFlat = std(plateTex(), 0xffffff, 0.5, 0.38);   // matte light steel, as on the reference
+const mSteel = std(metalTex(2, 150, 50), 0xffffff, 0.5, 0.42);
 const mSteelD = sideD(mSteel), mRustD = sideD(mRust), mRedD = sideD(mRed);
 const mPaul = std(paulTex(), 0xffffff, 0.45, 0.55); mPaul.side = THREE.DoubleSide;
 const mOrn = std(ornTex(), 0xffffff, 0.55, 0.45);
@@ -48,42 +48,32 @@ const flange = put(shoulderG, new THREE.CylinderGeometry(0.078, 0.078, 0.028, 8)
 const collar = put(shoulderG, new THREE.CylinderGeometry(0.048, 0.06, 0.06, 8), mMetal, -0.065, 0, 0); collar.rotation.z = Math.PI / 2;
 for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + 0.3; put(shoulderG, new THREE.BoxGeometry(0.012, 0.014, 0.014), mMetal, -0.121, Math.cos(a) * 0.058, Math.sin(a) * 0.058); }
 
-/* ---------- pauldron: layered angular shell, ornament plate on the outer face ---------- */
-// annular sector in the frame's XY plane (0 = outer side, PI/2 = top), extruded along Z (forward)
-function paulShell(rIn, rOut, a0, a1, seg, depth, uvK){
-  const sh = new THREE.Shape();
-  for (let i = 0; i <= seg; i++) { const a = a0 + (a1 - a0) * i / seg; i ? sh.lineTo(Math.cos(a) * rOut, Math.sin(a) * rOut) : sh.moveTo(Math.cos(a) * rOut, Math.sin(a) * rOut); }
-  for (let i = seg; i >= 0; i--) { const a = a0 + (a1 - a0) * i / seg; sh.lineTo(Math.cos(a) * rIn, Math.sin(a) * rIn); }
-  const g = new THREE.ExtrudeGeometry(sh, { depth, bevelEnabled: false, steps: 1 });
-  g.translate(0, 0, -depth / 2);
-  const uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * uvK, uv.getY(i) * uvK);
-  return g;
-}
+/* ---------- pauldron: a massive faceted steel cap, the red cross painted on its upper-outer face (as on the reference) ---------- */
 const pauldron = new THREE.Group(); pauldron.name = 'Pauldron';
-pauldron.position.set(0.035, 0.03, 0); pauldron.rotation.set(0, -0.6, -0.22); shoulderG.add(pauldron);   // turned ~35° to the front: the ornament faces the viewer, as on the reference
-const PR = 0.175, PA0 = -0.62, PA1 = 2.12;
-const shell = put(pauldron, paulShell(PR - 0.03, PR, PA0, PA1, 7, 0.34, 4), mSteel);
-// servo housing that fills the shell (reads as a solid shoulder from the front)
-const housing = put(pauldron, new THREE.CylinderGeometry(0.118, 0.118, 0.29, 6), mMetal, -0.015, 0.0, 0); housing.rotation.x = Math.PI / 2;
-for (const zs of [-1, 1]) { const cap = put(pauldron, new THREE.CylinderGeometry(0.07, 0.085, 0.02, 6), mRust, -0.015, 0.0, zs * 0.15); cap.rotation.x = Math.PI / 2;
-  const hub = put(pauldron, new THREE.CylinderGeometry(0.03, 0.03, 0.02, 8), mDark, -0.015, 0.0, zs * 0.165); hub.rotation.x = Math.PI / 2; }
-// front / back rust trims with rivets
-for (const zs of [-1, 1]) {
-  put(pauldron, paulShell(PR - 0.034, PR + 0.012, PA0 - 0.02, PA1 + 0.02, 7, 0.026, 4), mRust, 0, 0, zs * 0.163);
-  for (let i = 1; i < 7; i++) { const a = PA0 + (PA1 - PA0) * (i + 0.5) / 7.5; put(pauldron, new THREE.BoxGeometry(0.016, 0.016, 0.016), mMetal, Math.cos(a) * (PR + 0.012), Math.sin(a) * (PR + 0.012), zs * 0.163); }
-}
-// lower lames stepping down the outer side
-const lame1 = put(pauldron, paulShell(PR - 0.005, PR + 0.022, -1.02, -0.3, 3, 0.31, 4), mSteel, 0, 0, 0);
-const lame2 = put(pauldron, paulShell(PR + 0.012, PR + 0.036, -1.32, -0.82, 2, 0.28, 4), mRust, 0, 0, 0);
-// raised crest ridge along the top
-put(pauldron, new THREE.BoxGeometry(0.03, 0.02, 0.36), mRust, Math.cos(1.45) * (PR + 0.004), Math.sin(1.45) * (PR + 0.004), 0).rotation.z = 1.45 - Math.PI / 2;
-// ornament plate: a rhombus bolted to the upper-outer facet, facing out
-const PAo = 0.62;
+pauldron.position.set(0.02, 0.05, 0); pauldron.rotation.set(0, -0.45, -0.12); shoulderG.add(pauldron);   // turned to the front: the cross faces the viewer
+// light matte steel: fine grime and scratches, no big rust blots (those read as "eyes" on a large plate)
+const mPaulSteel = std(pixTex(32, 32, (x, y) => {
+  let n = 172 + rnd() * 26 - (rnd() < 0.08 ? 46 : 0);
+  if ((x + 2 * y) % 29 === 0 || (3 * x - y + 64) % 37 === 0) n += 26;                  // scratches
+  return [n, n, n + 6];
+}), 0xffffff, 0.5, 0.35);
+const PAUL = [
+  { y: -0.14, w: 0.2,  d: 0.27, x: 0.09,  c: 0.05 },    // lower outer edge
+  { y: -0.03, w: 0.3,  d: 0.34, x: 0.075, c: 0.055 },
+  { y:  0.05, w: 0.31, d: 0.34, x: 0.065, c: 0.055 },
+  { y:  0.2,  w: 0.16, d: 0.26, x: 0.0,   c: 0.05 }     // crown: the outer face slopes up and in at ~45°
+];
+const shell = loft(pauldron, PAUL, mPaulSteel, { ku: 3, kv: 3 });
+loft(pauldron, bandRings(PAUL, -0.14, -0.112, 0.008), mRust, { ku: 5, kv: 5 });                 // worn lower rim
+for (let i = 0; i < 8; i++) { const q = ringPtAt(ringAt(PAUL, -0.126), 0.08 + i * 0.12); put(pauldron, new THREE.BoxGeometry(0.016, 0.016, 0.016), mMetal, q.p.x + q.n.x * 0.012, -0.126, q.p.z + q.n.z * 0.012); }   // rivets
+// the cross plate covers the sloping upper-outer face
+const pf0 = ringPtAt(ringAt(PAUL, 0.05), 0.25).p, pf1 = ringPtAt(ringAt(PAUL, 0.2), 0.25).p;
+const PAo = Math.atan2(pf0.x - pf1.x, pf1.y - pf0.y);                                           // outward normal of that face
 const ornG = new THREE.Group(); ornG.rotation.order = 'ZYX'; ornG.rotation.set(0, Math.PI / 2, PAo);
-ornG.position.set(Math.cos(PAo) * (PR + 0.004), Math.sin(PAo) * (PR + 0.004), 0); pauldron.add(ornG);
-const ornBack = put(ornG, new THREE.BoxGeometry(0.172, 0.172, 0.014), mRust, 0, 0, 0.004);
-const boss = put(ornG, new THREE.BoxGeometry(0.156, 0.156, 0.016), [mSteel, mSteel, mSteel, mSteel, mOrn, mSteel], 0, 0, 0.012);
-for (let k = 0; k < 4; k++) { const ph = k * Math.PI / 2; put(ornG, new THREE.BoxGeometry(0.016, 0.016, 0.02), mMetal, Math.cos(ph + Math.PI / 4) * 0.105, Math.sin(ph + Math.PI / 4) * 0.105, 0.014); }
+ornG.position.set((pf0.x + pf1.x) / 2 + Math.cos(PAo) * 0.004, (pf0.y + pf1.y) / 2 + Math.sin(PAo) * 0.004, 0); pauldron.add(ornG);
+const ornBack = put(ornG, new THREE.BoxGeometry(0.2, 0.2, 0.012), mRust, 0, 0, 0.001);
+const boss = put(ornG, new THREE.BoxGeometry(0.186, 0.186, 0.014), [mPaulSteel, mPaulSteel, mPaulSteel, mPaulSteel, mOrn, mPaulSteel], 0, 0, 0.008);
+for (let k = 0; k < 4; k++) { const ph = k * Math.PI / 2; put(ornG, new THREE.BoxGeometry(0.016, 0.016, 0.02), mMetal, Math.cos(ph + Math.PI / 4) * 0.118, Math.sin(ph + Math.PI / 4) * 0.118, 0.01); }
 arcNodes.push({ o: boss, order: 0.02 });
 
 /* ---------- upper arm ---------- */
@@ -104,12 +94,18 @@ put(upperArm, new THREE.CylinderGeometry(0.094, 0.094, 0.018, 6), mRust, 0, -0.1
 put(upperArm, new THREE.CylinderGeometry(0.09, 0.082, 0.16, 6), mPlate, 0, -0.265, 0);
 put(upperArm, new THREE.CylinderGeometry(0.085, 0.085, 0.016, 6), mRust, 0, -0.352, 0);
 neonStrip(upperArm, Math.PI / 2, 0.09, 0.082, -0.265, 0.16, 0.11, 0.22);
-neonStrip(upperArm, Math.PI / 6, 0.09, 0.082, -0.265, 0.16, 0.07, 0.26);
+// front armour plate with a wide neon bar, as on the reference
+const uaP = hgrp(upperArm, 'UpperArmPlate', Math.sin(0.8) * 0.1, -0.25, Math.cos(0.8) * 0.1); uaP.rotation.y = 0.8;
+loft(uaP, [{ y: -0.1, w: 0.115, d: 0.04, c: 0.014 }, { y: 0.02, w: 0.132, d: 0.046, c: 0.016 }, { y: 0.1, w: 0.12, d: 0.04, c: 0.014 }], mPlateFlat, { planarU: true });
+put(uaP, new THREE.BoxGeometry(0.04, 0.16, 0.01), mDark, 0, 0, 0.02);
+const uaNeon = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.14, 0.012), neonMat(0.26)); uaNeon.position.set(0, 0, 0.024); uaP.add(uaNeon);
+arcNodes.push({ o: uaNeon, order: 0.26 });
 
 /* ---------- elbow + forearm ---------- */
 const elb = put(forearm, new THREE.CylinderGeometry(0.052, 0.052, 0.13, 8), mMetal); elb.rotation.z = Math.PI / 2;
 [-1, 1].forEach(s => { const c = put(forearm, new THREE.CylinderGeometry(0.042, 0.042, 0.02, 8), mDark, s * 0.072, 0, 0); c.rotation.z = Math.PI / 2; });
-const elbRing = new THREE.Mesh(new THREE.TorusGeometry(0.027, 0.006, 4, 10), neonMat(0.42)); elbRing.position.set(0.084, 0, 0); elbRing.rotation.y = Math.PI / 2; forearm.add(elbRing);
+put(forearm, new THREE.CylinderGeometry(0.068, 0.076, 0.03, 8), mSteel, 0.085, 0, 0).rotation.z = Math.PI / 2;     // elbow cap
+const elbRing = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.007, 4, 10), neonMat(0.42)); elbRing.position.set(0.102, 0, 0); elbRing.rotation.y = Math.PI / 2; forearm.add(elbRing);
 arcNodes.push({ o: elbRing, order: 0.42 });
 const guard = put(forearm, new THREE.CylinderGeometry(0, 0.046, 0.075, 4), mSteel, 0, 0.005, -0.062); guard.rotation.x = -Math.PI / 2;
 put(forearm, new THREE.CylinderGeometry(0.022, 0.022, FA, 6), mDark, 0, -FA / 2, 0);
@@ -117,9 +113,13 @@ put(forearm, new THREE.CylinderGeometry(0.09, 0.09, 0.014, 6), mRust, 0, -0.038,
 put(forearm, new THREE.CylinderGeometry(0.086, 0.078, 0.14, 6), mPlate, 0, -0.108, 0);
 put(forearm, new THREE.CylinderGeometry(0.08, 0.08, 0.012, 6), mRust, 0, -0.2, 0);
 put(forearm, new THREE.CylinderGeometry(0.076, 0.07, 0.12, 6), mPlate, 0, -0.262, 0);
-neonStrip(forearm, Math.PI / 2, 0.086, 0.078, -0.108, 0.14, 0.1, 0.55);
-neonStrip(forearm, Math.PI / 6, 0.086, 0.078, -0.108, 0.14, 0.075, 0.6);
-neonStrip(forearm, Math.PI / 2, 0.076, 0.07, -0.262, 0.12, 0.085, 0.75);
+neonStrip(forearm, Math.PI / 6, 0.086, 0.078, -0.108, 0.14, 0.075, 0.55);
+// outer armour plate with a long neon bar, as on the reference
+const faP = hgrp(forearm, 'ForearmPlate', Math.sin(1.3) * 0.092, -0.15, Math.cos(1.3) * 0.092); faP.rotation.y = 1.3;
+loft(faP, [{ y: -0.11, w: 0.1, d: 0.04, c: 0.014 }, { y: 0.0, w: 0.132, d: 0.046, c: 0.016 }, { y: 0.1, w: 0.12, d: 0.04, c: 0.014 }], mPlateFlat, { planarU: true });
+put(faP, new THREE.BoxGeometry(0.04, 0.17, 0.01), mDark, 0, -0.005, 0.02);
+const faNeon = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.15, 0.012), neonMat(0.65)); faNeon.position.set(0, -0.005, 0.024); faP.add(faNeon);
+arcNodes.push({ o: faNeon, order: 0.65 });
 put(forearm, new THREE.CylinderGeometry(0.07, 0.066, 0.034, 8), mRust, 0, -0.338, 0);
 // hydraulic "tendon" on the back of the forearm
 put(forearm, new THREE.CylinderGeometry(0.014, 0.014, 0.13, 6), mMetal, 0, -0.12, -0.098);
@@ -142,15 +142,15 @@ const armLight = new THREE.PointLight(0x4ef3ff, 0.5, 1.1, 2); armLight.position.
 
 /* ---------- hand: massive steel fist ---------- */
 put(hand, new THREE.IcosahedronGeometry(0.036, 0), mDark);
-put(hand, new THREE.BoxGeometry(0.095, 0.115, 0.14), mSteel, 0, -0.075, 0);
-put(hand, new THREE.BoxGeometry(0.024, 0.108, 0.152), mPlateFlat, 0.058, -0.07, 0);
+put(hand, new THREE.BoxGeometry(0.105, 0.125, 0.158), mSteel, 0, -0.075, 0);
+put(hand, new THREE.BoxGeometry(0.026, 0.118, 0.166), mPlateFlat, 0.062, -0.07, 0);
 (function(){
   const g = new THREE.Group(); g.position.set(0.071, -0.066, 0); g.rotation.y = Math.PI / 2; hand.add(g);
   put(g, new THREE.BoxGeometry(0.03, 0.082, 0.004), mDark);
   const s = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.068, 0.006), neonMat(0.95)); s.position.z = 0.002; g.add(s);
   arcNodes.push({ o: s, order: 0.95 });
 })();
-put(hand, new THREE.BoxGeometry(0.052, 0.032, 0.16), mMetal, 0.022, -0.128, 0);
+put(hand, new THREE.BoxGeometry(0.056, 0.036, 0.172), mMetal, 0.022, -0.128, 0);
 const FZ = [0.051, 0.017, -0.017, -0.051];
 FZ.forEach(z => put(hand, new THREE.BoxGeometry(0.02, 0.024, 0.024), mRust, 0.052, -0.128, z));
 put(hand, new THREE.BoxGeometry(0.012, 0.1, 0.13), mRubber, -0.0535, -0.078, 0);
@@ -167,7 +167,7 @@ const fingers = FZ.map((z, i) => {
     if (j === 0) b.position.set(KNUCKLE.x, KNUCKLE.y, z); else b.position.y = -FL[j - 1] * sc;
     parent.add(b);
     const L = FL[j] * sc;
-    put(b, new THREE.BoxGeometry(0.034 - j * 0.002, L - 0.008, 0.029), j === 2 ? mMetal : mSteel, 0, -L / 2, 0);
+    put(b, new THREE.BoxGeometry(0.04 - j * 0.002, L - 0.006, 0.032), j === 2 ? mMetal : mSteel, 0, -L / 2, 0);
     const pin = put(b, new THREE.CylinderGeometry(0.012, 0.012, 0.033, 6), mDark); pin.rotation.x = Math.PI / 2;
     if (j === 2) put(b, new THREE.BoxGeometry(0.026, 0.01, 0.025), mRust, 0.004, -L + 0.004, 0);
     bones.push(b); parent = b;
@@ -181,7 +181,7 @@ const thumb = [];
     const b = new THREE.Group(); b.name = 'Thumb_' + (j + 1);
     if (j === 0) b.position.set(-0.042, -0.04, 0.078); else b.position.y = -TL[0];
     parent.add(b);
-    put(b, new THREE.BoxGeometry(0.034, TL[j] - 0.008, 0.032), j ? mMetal : mSteel, 0, -TL[j] / 2, 0);
+    put(b, new THREE.BoxGeometry(0.04, TL[j] - 0.006, 0.036), j ? mMetal : mSteel, 0, -TL[j] / 2, 0);
     const pin = put(b, new THREE.CylinderGeometry(0.013, 0.013, 0.036, 6), mDark); pin.rotation.x = Math.PI / 2;
     thumb.push(b); parent = b;
   }
@@ -189,22 +189,24 @@ const thumb = [];
 arcNodes.sort((a, b) => a.order - b.order);
 
 /* ---------- exposed wires running through the joints (rebuilt every frame) ---------- */
-const wires = [0.5, 2.1, 3.7, 5.3].map((a, k) => {
-  const s = k - 1.5;
+const mPurple = std(null, 0x7b3fb3, 0.6, 0.1);
+const WIRE_MATS = [mRed, mBlue, mCopper, mPurple, mRed, mBlue, mDark, mCopper];
+const wires = [0.2, 1.4, 2.2, 2.9, 3.6, 4.3, 5.0, 5.8].map((a, k) => {
+  const s = (k - 3.5) * 0.45, bulge = k % 3 === 0 ? 0.13 : 0.108;
   const P = (bone, r, y, da) => [bone, new V3(Math.sin(a + (da || 0)) * r, y, Math.cos(a + (da || 0)) * r)];
-  return { mat: k % 2 ? mBlue : mRed, mesh: null, pts: [
+  return { mat: WIRE_MATS[k], mesh: null, pts: [
     [shoulderG, new V3(-0.1, -0.01 + s * 0.008, s * 0.02)],
     [shoulderG, new V3(-0.06, -0.09 - Math.abs(s) * 0.012, s * 0.035)],
-    P(upperArm, 0.056, -0.05), P(upperArm, 0.07, -0.155, 0.2), P(upperArm, 0.045, -0.26),
-    P(upperArm, 0.066, -0.37, 0.25), P(forearm, 0.072, -0.004, 0.3), P(forearm, 0.045, -0.1),
-    P(forearm, 0.072, -0.188, 0.3), P(forearm, 0.042, -0.262), P(forearm, 0.048, -0.345),
+    P(upperArm, 0.075, -0.05), P(upperArm, bulge, -0.15, 0.2), P(upperArm, 0.098, -0.26),       // the bundle bulges out between the plates
+    P(upperArm, 0.09, -0.37, 0.25), P(forearm, 0.095, -0.004, 0.3), P(forearm, 0.1, -0.1),
+    P(forearm, 0.096, -0.188, 0.3), P(forearm, 0.085, -0.262), P(forearm, 0.06, -0.345),
     [hand, new V3(0, -0.03, s * 0.02)]
   ]};
 });
 function rebuildWires(){
   wires.forEach(w => {
     const pts = w.pts.map(([b, v]) => b.localToWorld(v.clone()));
-    const geo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 60, 0.0085, 4, false);
+    const geo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, 0.0105, 4, false);
     if (!w.mesh) { w.mesh = new THREE.Mesh(geo, w.mat); w.mesh.castShadow = true; w.mesh.frustumCulled = false; scene.add(w.mesh); }
     else { w.mesh.geometry.dispose(); w.mesh.geometry = geo; }
   });

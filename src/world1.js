@@ -72,7 +72,7 @@ function ribbonTex(){
 function plateTex(){
   const blots = [[rnd() * 16, 12 + rnd() * 4, 2 + rnd() * 2], [rnd() * 16, rnd() * 16, 1.2 + rnd()]];
   return pixTex(16, 16, (x, y) => {
-    let n = 150 + rnd() * 42 - y * 1.2;
+    let n = 165 + rnd() * 40 - y * 1.2;
     if (x === 0 || x === 15 || y === 0 || y === 15) n = 88 + rnd() * 14;
     const riv = (x === 2 || x === 13) && (y === 2 || y === 13);
     if (riv) n = 222; if ((x === 2 || x === 13) && (y === 3 || y === 14)) n = 96;
@@ -135,12 +135,33 @@ const camera = new THREE.PerspectiveCamera(40, 1, 0.05, 60);
 const cam = { theta: 2.25, phi: 1.33, r: 5.4, tx: -0.25, ty: 1.4, tz: 0.4, auto: !reduceMotion, dragging: false };
 
 /* ---------- lights ---------- */
-scene.add(new THREE.HemisphereLight(0xd3d9ff, 0x2a2018, 0.72));
-const sun = new THREE.DirectionalLight(0xffe2c4, 0.78);        // softer key: top faces of linen and fur stay beige, not white
+scene.add(new THREE.HemisphereLight(0xd3d9ff, 0x2a2018, 0.28));
+const sun = new THREE.DirectionalLight(0xffe2c4, 0.58);        // softer key: top faces of linen and fur stay beige, not white
 sun.position.set(3, 6, 2.5); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
 Object.assign(sun.shadow.camera, { left: -3.5, right: 3.5, top: 3.5, bottom: -3.5, near: 1, far: 16 });
 scene.add(sun);
 const rim = new THREE.DirectionalLight(0x9a7bff, 0.55); rim.position.set(-3, 2.5, -3); scene.add(rim);
+// image-based fill: a soft studio sky with a warm key box (sun side) and a cool fill box, prefiltered once a renderer exists.
+// Metals reflect it (light steel instead of black), cloth gets a soft fill instead of a flat ambient.
+function setEnvironment(renderer){
+  const env = new THREE.Scene();
+  const g = new THREE.SphereGeometry(10, 24, 12), pos = g.attributes.position, col = new Float32Array(pos.count * 3);
+  const top = new THREE.Color(0.62, 0.6, 0.58), hor = new THREE.Color(0.5, 0.48, 0.5), bot = new THREE.Color(0.09, 0.075, 0.09), c = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) {
+    const k = pos.getY(i) / 10;
+    if (k > 0) c.copy(hor).lerp(top, Math.pow(k, 0.7)); else c.copy(hor).lerp(bot, Math.min(1, -k * 3));
+    col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  env.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
+  const box = (color, x, y, z, w, h) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })); m.position.set(x, y, z); m.lookAt(0, 0, 0); env.add(m); };
+  box(new THREE.Color(2.4, 2.1, 1.8), 4.5, 7, 3.8, 5, 4);
+  box(new THREE.Color(1.0, 0.96, 0.94), -6, 3, 5, 5, 4);
+  const pm = new THREE.PMREMGenerator(renderer);
+  scene.environment = pm.fromScene(env, 0.04).texture;
+  pm.dispose();
+  ground.material.envMapIntensity = 0.25;
+}
 
 /* ---------- ground + rocks ---------- */
 const gTex = groundTex(); gTex.repeat.set(80, 80);

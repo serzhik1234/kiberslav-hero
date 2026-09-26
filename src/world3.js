@@ -445,7 +445,7 @@ function step(raw){
 
 return {
   scene, camera, cam, ACTIONS, ARM_ACTIONS, TIERS, GRIP_DUR,
-  step, setLoop, trigger, setArmMode, armAct,
+  step, setLoop, trigger, setArmMode, armAct, setEnvironment,
   setTier(i){ tierIdx = i; }, setSlow(v){ slow = !!v; },
   get flash(){ return flashV; }, get plasmaOn(){ return plasmaOn; }, get armMode(){ return armMode; },
   // for offline renders: jump straight into a pose

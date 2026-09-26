@@ -15,6 +15,7 @@ const cam = world.cam;
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
+try { world.setEnvironment(renderer); } catch (e) { /* no float targets: plain lights only */ }
 stage.prepend(renderer.domElement);
 let pixelMode = false;
 

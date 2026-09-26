@@ -1,0 +1,6 @@
+{
+  "name": "kiberslav-hero-render",
+  "private": true,
+  "description": "Headless render of the hero scene: three r128 + headless-gl",
+  "dependencies": { "gl": "^8.1.6", "three": "0.128.0" }
+}

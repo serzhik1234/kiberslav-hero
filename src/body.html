@@ -1,0 +1,79 @@
+<body>
+<main class="app">
+  <section class="stage" id="stage" aria-label="3D-просмотр копья и кибер-руки">
+    <div class="stage-title">
+      <h1>Копьё и кибер-рука</h1>
+      <p>Вилы-эмиттер, колба-реактор и стальной кулак на одном кабеле. Самоделка крестьянина.</p>
+    </div>
+    <p class="now" id="now" aria-live="polite">Стоит на месте</p>
+    <p class="stage-hint">Тяни мышью, чтобы вращать. Колесо — приблизить.</p>
+    <div class="zoom"><button id="zin" aria-label="Приблизить">+</button><button id="zout" aria-label="Отдалить">−</button></div>
+    <div class="flash" id="flash"></div>
+    <div class="fail" id="fail">Не удалось загрузить 3D-движок. Проверьте подключение к интернету и обновите страницу.</div>
+  </section>
+
+  <aside class="panel">
+    <div class="stitch" aria-hidden="true"></div>
+
+    <div class="group">
+      <h2>Движение</h2>
+      <div class="row">
+        <button data-loop="idle" aria-pressed="true">Стоять <kbd>1</kbd></button>
+        <button data-loop="run" aria-pressed="false">Бег <kbd>2</kbd></button>
+      </div>
+    </div>
+
+    <div class="group">
+      <h2>Кибер-рука</h2>
+      <div class="row">
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button data-armact="clench">Сжать кулак <kbd>G</kbd></button>
+        <button data-armact="charge">Заряд <kbd>C</kbd></button>
+      </div>
+      <p class="note">Кабель идёт от гнезда на древке к разъёму на запястье. Заряд руки уходит по кабелю в копьё; если плазма выключена, она загорится.</p>
+    </div>
+
+    <div class="group">
+      <h2>Атаки</h2>
+      <div class="row">
+        <button data-act="thrust">Тычок <kbd>J</kbd></button>
+        <button data-act="sweep">Размах <kbd>K</kbd></button>
+        <button data-act="throw">Бросок плазмы <kbd>L</kbd></button>
+      </div>
+    </div>
+
+    <div class="group">
+      <h2>Манёвры</h2>
+      <div class="row">
+        <button data-act="slide">Подкат <kbd>Shift</kbd></button>
+        <button data-act="jump">Прыжок с ударом <kbd>Пробел</kbd></button>
+      </div>
+    </div>
+
+    <div class="group">
+      <h2>Копьё</h2>
+      <div class="row">
+        <button data-act="toggle" id="powerBtn"><span id="powerLbl">Выключить плазму</span> <kbd>F</kbd></button>
+      </div>
+      <label class="tier"><span>Уровень прокачки: <b id="tierName">3, Клинок</b></span>
+        <input type="range" id="tier" min="1" max="5" step="1" value="3" aria-describedby="tierHelp"></label>
+      <p class="note" id="tierHelp">С уровнем растут клинок, число разрядов, яркость и индикатор заряда на древке.</p>
+    </div>
+
+    <div class="group">
+      <h2>Показ</h2>
+      <label class="chk"><input type="checkbox" id="slow"> Замедление в 4 раза</label>
+      <label class="chk"><input type="checkbox" id="pix"> Пиксельный рендер</label>
+      <label class="chk"><input type="checkbox" id="auto" checked> Автоповорот камеры</label>
+    </div>
+
+    <div class="group">
+      <h2>Длительность анимаций</h2>
+      <dl class="timings" id="timings"></dl>
+      <p class="note">Ключевые позы и тайминги можно переносить в Animator Unity как ориентир. Кости руки названы как в будущем риге: Shoulder, UpperArm, Forearm, Hand, Finger1–4, Thumb.</p>
+    </div>
+  </aside>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>

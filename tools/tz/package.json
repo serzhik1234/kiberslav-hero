@@ -1,0 +1,6 @@
+{
+  "name": "kiberslav-hero-tz",
+  "private": true,
+  "description": "Builds the artist brief TZ_Kiberslav_3D.docx: node make_tz.js ../../export/TZ_Kiberslav_3D.docx",
+  "dependencies": { "docx": "^9.0.0" }
+}

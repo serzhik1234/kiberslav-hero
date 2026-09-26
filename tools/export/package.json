@@ -1,0 +1,6 @@
+{
+  "name": "kiberslav-hero-export",
+  "private": true,
+  "description": "Blockout export of the hero: skinned mesh + skeleton + baked clips to .glb (export.js), then .fbx/.blend via Blender (to_fbx.py)",
+  "dependencies": { "three": "0.128.0" }
+}

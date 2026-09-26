@@ -299,8 +299,17 @@ for (const s of [-1, 1]) {
   g.rotation.z = s * Math.atan2(B.y - A.y, Math.abs(B.x - A.x));
   sbox(g, L + 0.02, 0.09, L + 0.02, 0.085, 0.02, 0, 0, 0.01, mEmb, s * L / 2, 0, 0, { ku: 3.1, kv: 11, cv0: 0.5 });
 }
-// armhole trim on the cyber side: the shirt ends in an embroidered edge where the steel arm comes out
-for (const side of [1, -1]) loft(shirt, frontStripRings(TORSO, 0.302, 0.06, 0.25, 0.05, 0.012, side), mEmbV, { planarU: true, kv: 2.8 });
+// cyber side: a short sleeve of the shirt wraps the steel shoulder joint and ends in an embroidered hem;
+// the arm and its wire bundle come out of it, the pauldron sits on top (shoulder-local, joint at the origin)
+const STUMP = [
+  { y: 0.07,  w: 0.16, d: 0.21, x: -0.035, c: 0.055 },
+  { y: 0.0,   w: 0.24, d: 0.27, x: -0.01,  c: 0.08 },
+  { y: -0.09, w: 0.25, d: 0.27, c: 0.085 }
+];
+const stump = hgrp(shoulderG, 'LeftSleeveStump', 0, 0, 0);
+loft(stump, STUMP, mLinen, LIN);
+loft(stump, bandRings(STUMP, -0.09, -0.045, 0.01), mEmbBand, { ku: 6 });
+loft(stump, bandRings(STUMP, -0.1, -0.088, 0.014), mRed, {});
 put(chest, new THREE.BoxGeometry(0.05, 0.2, 0.2), mDark, CYBER_SH.x - 0.02, CYBER_SH.y, 0);   // socket of the cyber mount
 
 /* ---------- neck: short and thick, mostly behind the beard ---------- */
@@ -603,3 +612,76 @@ function gripFollow(){
     m.material = Array.isArray(m.material) ? m.material.map(aoMat) : aoMat(m.material);
   });
 })();
+
+/* ================= BODY ANIMATION =================
+   The body rides on the spear root (ArmPivot). These layers make it move like a body: the legs are solved
+   by two-bone IK so the feet stay on the ground (step cycle when running, tucked in the air), the spine
+   leans and twists, the neck keeps the head looking ahead, the living arm swings. Keys per spear action. */
+const LEG_REST = {};
+(function(){
+  scene.updateMatrixWorld(true);
+  const groundLocal = GY - HIP_Y;                                         // ground height in hips space
+  for (const side of ['Left', 'Right']) {
+    const ank = hips.worldToLocal(legs[side].ft.getWorldPosition(new V3()));
+    LEG_REST[side] = { hip: legs[side].up.position.clone(), ank, lift: ank.y - groundLocal };
+  }
+})();
+const BODY_DEF = { w: 0, lean: 0, twist: 0, crouch: 0, fl: 0, bl: 0, tuck: 0, arm: 0 };
+const bodyKeys = keys => prepG(BODY_DEF, keys);
+const Z0 = { lean: 0, twist: 0, crouch: 0, fl: 0, bl: 0, tuck: 0, arm: 0 };
+const BODY_ACT = {
+  // lunge: wind up with the spear shoulder back, then drive it forward with the left foot
+  thrust: bodyKeys([{ t: 0 }, { t: 0.25, w: 1, lean: -0.06, twist: 0.2, crouch: 0.3, fl: 0.1, bl: -0.1, arm: 0.3 },
+    { t: 0.33, e: 'out', lean: 0.22, twist: -0.22, crouch: 0.5, fl: 0.45, bl: -0.3, arm: 0.5 }, { t: 0.5, lean: 0.18, twist: -0.18 }, Object.assign({ t: 1, w: 0 }, Z0)]),
+  sweep: bodyKeys([{ t: 0 }, { t: 0.18, w: 1, lean: 0.15, crouch: 0.45, fl: 0.2, bl: -0.1, arm: 0.6 }, { t: 0.68, lean: 0.12 }, Object.assign({ t: 1, w: 0 }, Z0)]),
+  // slide: lean back, lead leg out in front, the other folded under
+  slide: bodyKeys([{ t: 0 }, { t: 0.15, e: 'out', w: 1, lean: -0.3, fl: 0.55, bl: -0.1, arm: 0.6 }, { t: 0.75 }, Object.assign({ t: 1, w: 0 }, Z0)]),
+  jump: bodyKeys([{ t: 0 }, { t: 0.12, w: 0.9, crouch: 0.8, lean: 0.15, arm: 0.2 }, { t: 0.4, e: 'out', w: 1, crouch: 0, tuck: 1, lean: -0.1, arm: 0.7 },
+    { t: 0.58, tuck: 0.9, lean: 0.25 }, { t: 0.7, e: 'in', tuck: 0.2, lean: 0.35, crouch: 0.5, fl: 0.25, bl: -0.2 }, { t: 0.86 }, Object.assign({ t: 1, w: 0 }, Z0)]),
+  throw: bodyKeys([{ t: 0 }, { t: 0.45, w: 1, lean: -0.15, twist: 0.3, crouch: 0.2, fl: 0.15, bl: -0.2, arm: 0.35 },
+    { t: 0.52, e: 'out', lean: 0.25, twist: -0.25, crouch: 0.4, fl: 0.4, bl: -0.3 }, { t: 0.7, lean: 0.15, twist: -0.15 }, Object.assign({ t: 1, w: 0 }, Z0)]),
+  on: bodyKeys([{ t: 0 }, { t: 0.35, w: 0.6, lean: -0.08, arm: 0.25 }, { t: 0.75, lean: 0.06, crouch: 0.2 }, Object.assign({ t: 1, w: 0 }, Z0)]),
+  off: bodyKeys([{ t: 0 }, { t: 0.3, w: 0.6, lean: 0.05, crouch: 0.1 }, Object.assign({ t: 1, w: 0 }, Z0)])
+};
+const bqHip = new Q(), bqKnee = new Q(), bqFoot = new Q(), bE = new THREE.Euler();
+const bvD = new V3(), bvP = new V3(), bvK = new V3(), bvW = new V3(), bvA = new V3(), bvT = new V3(), bvTuck = new V3(), bvPole = new V3(), bvH = new V3();
+function legIK(side, target, pole){
+  const Lg = legs[side], H = LEG_REST[side].hip, a = THIGH, b = SHIN;
+  bvD.subVectors(target, H); let d = bvD.length(); const dir = bvD.divideScalar(d || 1);
+  d = Math.min(a + b - 1e-3, Math.max(0.25, d));
+  const cosA = (a * a + d * d - b * b) / (2 * a * d), sinA = Math.sqrt(Math.max(0, 1 - cosA * cosA));
+  bvP.copy(pole).addScaledVector(dir, -pole.dot(dir)).normalize();
+  bvK.copy(H).addScaledVector(dir, a * cosA).addScaledVector(bvP, a * sinA);
+  bvW.copy(H).addScaledVector(dir, d);
+  basisQuat(bvA.subVectors(H, bvK).normalize(), pole, bqHip);
+  basisQuat(bvA.subVectors(bvK, bvW).normalize(), pole, bqKnee);
+  Lg.up.quaternion.copy(bqHip);
+  Lg.kn.quaternion.copy(bqHip).invert().multiply(bqKnee);
+}
+function animateBody(dt, T, ph, run, act, k){
+  const B = act && BODY_ACT[act] ? sampleG(BODY_DEF, BODY_ACT[act], k) : null;
+  const g = key => B ? B[key] * B.w : 0;
+  // torso: breathing, run lean, action lean/twist; the neck takes back most of it so the head looks ahead
+  const lean = 0.012 * Math.sin(T * 1.7) + 0.16 * run + g('lean'), twist = g('twist') + 0.06 * run * Math.sin(ph);
+  spine.rotation.set(lean, -0.15 + twist, 0.03 * run * Math.sin(ph));
+  neck.rotation.set(-0.5 * lean, 0.1 - 0.6 * twist + 0.04 * Math.sin(T * 0.45), 0);
+  hips.position.y = HIP_Y - 0.1 * g('crouch');
+  // living arm: swings against the legs when running, flies out for balance in attacks
+  const arm = g('arm');
+  rUpper.rotation.set(0.06 + 0.55 * run * Math.sin(ph) - 0.25 * arm, 0, -0.28 - 0.45 * arm);
+  rFore.rotation.set(-0.28 - 0.55 * run - 0.3 * arm, 0, 0.08);
+  // legs: feet on the ground (or tucked), knees forward
+  hips.updateMatrixWorld(true);
+  const ground = -hips.getWorldPosition(bvH).y, tuck = g('tuck');
+  for (const [side, s] of [['Left', 1], ['Right', -1]]) {
+    const R = LEG_REST[side], phase = ph + (s > 0 ? 0 : Math.PI);
+    const lift = run * Math.max(0, Math.cos(phase)) * 0.2;
+    bvT.copy(R.ank);
+    bvT.z += 0.3 * run * Math.sin(phase) + 0.6 * (s > 0 ? g('fl') : g('bl'));
+    bvT.y = ground + R.lift + lift;
+    if (tuck > 0) bvT.lerp(bvTuck.set(R.hip.x * 1.2, R.hip.y - (THIGH + SHIN) * 0.55, R.hip.z + (s > 0 ? 0.2 : -0.05)), tuck);
+    legIK(side, bvT, bvPole.set(s * 0.15, 0, 1).normalize());
+    bqFoot.setFromEuler(bE.set(0.5 * tuck + (lift > 0.02 ? 0.35 * lift / 0.2 : 0), s * 0.25, 0, 'YXZ'));
+    legs[side].ft.quaternion.copy(bqKnee).invert().multiply(bqFoot);
+  }
+}

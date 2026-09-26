@@ -50,7 +50,7 @@ for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + 0.3; put(shoulderG, ne
 
 /* ---------- pauldron: a massive faceted steel cap, the red cross painted on its upper-outer face (as on the reference) ---------- */
 const pauldron = new THREE.Group(); pauldron.name = 'Pauldron';
-pauldron.position.set(0.02, 0.05, 0); pauldron.rotation.set(0, -0.45, -0.12); shoulderG.add(pauldron);   // turned to the front: the cross faces the viewer
+pauldron.position.set(-0.06, 0.015, 0); pauldron.rotation.set(0, -0.45, -0.12); pauldron.scale.setScalar(0.92); shoulderG.add(pauldron);   // caps the shoulder of the shirt; turned so the cross faces the viewer
 // light matte steel: fine grime and scratches, no big rust blots (those read as "eyes" on a large plate)
 const mPaulSteel = std(pixTex(32, 32, (x, y) => {
   let n = 172 + rnd() * 26 - (rnd() < 0.08 ? 46 : 0);

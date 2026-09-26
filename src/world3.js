@@ -250,6 +250,8 @@ function step(raw){
   armPivot.position.lerpVectors(restPivot, root.position, gw);
   armPivot.rotation.y = yawG.rotation.y * gw;
   armPivot.updateMatrixWorld(true);
+  animateBody(dt, T, ph, runBlend, action ? action.name : null, k);   // legs, torso, living arm
+  armPivot.updateMatrixWorld(true);
   shoulderG.getWorldQuaternion(qS);
   const S = wpos(shoulderG);
 

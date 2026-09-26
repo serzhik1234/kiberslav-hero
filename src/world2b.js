@@ -663,14 +663,16 @@ function legIK(side, target, pole){
   Lg.up.quaternion.copy(bqHip);
   Lg.kn.quaternion.copy(bqHip).invert().multiply(bqKnee);
 }
-function animateBody(dt, T, ph, run, act, k){
+function animateBody(dt, T, ph, run, act, k, tw){
   const B = act && BODY_ACT[act] ? sampleG(BODY_DEF, BODY_ACT[act], k) : null;
   const g = key => B ? B[key] * B.w : 0;
   // torso: breathing, run lean, action lean/twist; the neck takes back most of it so the head looks ahead
   const lean = 0.012 * Math.sin(T * 1.7) + 0.16 * run + g('lean'), twist = g('twist') + 0.06 * run * Math.sin(ph);
   spine.rotation.set(lean, -0.15 + twist, 0.03 * run * Math.sin(ph));
-  neck.rotation.set(-0.5 * lean, 0.1 - 0.6 * twist + 0.04 * Math.sin(T * 0.45), 0);
-  hips.position.y = HIP_Y - 0.1 * g('crouch');
+  neck.rotation.set(-0.5 * lean, 0.1 - 0.6 * twist - 0.75 * guardYaw(tw, run) + 0.04 * Math.sin(T * 0.45), 0);   // in the guard he looks down the shaft
+  // two-handed guard: the hips step in behind the shaft and turn the left shoulder forward (world3 moves the spear, not the body)
+  hips.position.set(BX + (GUARD.x - BX) * tw, HIP_Y - 0.1 * g('crouch') - GUARD.dy * tw, BZ + (GUARD.z - BZ) * tw);
+  hips.rotation.y = guardYaw(tw, run);
   // living arm: swings against the legs when running, flies out for balance in attacks
   const arm = g('arm');
   rUpper.rotation.set(0.06 + 0.55 * run * Math.sin(ph) - 0.25 * arm, 0, -0.28 - 0.45 * arm);
@@ -689,4 +691,44 @@ function animateBody(dt, T, ph, run, act, k){
     bqFoot.setFromEuler(bE.set(0.5 * tuck + (lift > 0.02 ? 0.35 * lift / 0.2 : 0), s * 0.25, 0, 'YXZ'));
     legs[side].ft.quaternion.copy(bqKnee).invert().multiply(bqFoot);
   }
+}
+
+/* ================= TWO-HANDED GRIP =================
+   In combat and when running both hands hold the shaft: the cyber fist leads (spear origin), the right fist holds
+   the shaft behind it and slides along it (as a real spear grip), clamped to [-0.85, -0.3] from the cyber fist.
+   The right arm is solved by two-bone IK; out of reach it lets go smoothly. */
+const GUARD = { x: 0.48, z: -0.42, dy: 0.1, yaw: -1.2 };      // hips in ArmFrame in the guard (rest: BX, HIP_Y, BZ): the shaft runs along the right side, left shoulder forward
+function guardYaw(tw, run){ return GUARD.yaw * tw * (1 - 0.5 * run); }   // less bladed while running, so the stride stays forward
+// where the rest hips-space point p ends up in ArmPivot space for guard weight tw (spin pivot, root compensation)
+function guardPoint(p, tw, run, out){
+  out.copy(p).applyAxisAngle(Y_UP, guardYaw(tw, run));
+  out.x += BX + (GUARD.x - BX) * tw; out.z += BZ + (GUARD.z - BZ) * tw;
+  return out.applyAxisAngle(Y_UP, Math.PI / 2);                 // ArmFrame -> ArmPivot
+}
+const R_GRIP = new V3(0.01, -0.17, 0);                          // shaft centre inside the right fist, hand-local
+const rqP = new Q(), rqU = new Q(), rqF = new Q(), rqH = new Q(), rqT = new Q();
+const rvS = new V3(), rvO = new V3(), rvA = new V3(), rvP = new V3(), rvW = new V3(), rvE = new V3(), rvD = new V3(), rvN = new V3(), rvY = new V3();
+function solveRightHand(tw){
+  if (tw < 0.001) return;
+  rShoulder.getWorldPosition(rvS); rShoulder.getWorldQuaternion(rqP);
+  spear.getWorldPosition(rvO); spear.getWorldQuaternion(rqT); rvA.set(0, 1, 0).applyQuaternion(rqT);
+  const t = Math.max(-0.85, Math.min(-0.3, rvD.subVectors(rvS, rvO).dot(rvA)));
+  rvP.copy(rvO).addScaledVector(rvA, t);                              // where the right fist closes on the shaft
+  rvY.subVectors(rvS, rvP).addScaledVector(rvA, -rvD.subVectors(rvS, rvP).dot(rvA)).normalize();   // back of the grip, toward the shoulder
+  basisQuat(rvY, rvA, rqH);                                           // thumb (+Z) toward the tip
+  rvW.copy(R_GRIP).applyQuaternion(rqH).negate().add(rvP);            // wrist
+  const a = R_UA, b = R_FA; rvD.subVectors(rvW, rvS); const d0 = rvD.length(); const dir = rvD.divideScalar(d0 || 1);
+  const reach = 1 - Math.max(0, Math.min(1, (d0 - (a + b - 0.06)) / 0.1));   // lets go when the shaft is out of reach
+  const w = tw * reach; if (w < 0.001) return;
+  const d = Math.min(a + b - 1e-3, Math.max(Math.abs(a - b) + 0.02, d0));
+  const cosA = (a * a + d * d - b * b) / (2 * a * d), sinA = Math.sqrt(Math.max(0, 1 - cosA * cosA));
+  rvN.set(-0.6, -1, -0.35).normalize().applyQuaternion(rqP);         // elbow: down, out and back
+  rvN.addScaledVector(dir, -rvN.dot(dir)).normalize();
+  rvE.copy(rvS).addScaledVector(dir, a * cosA).addScaledVector(rvN, a * sinA);
+  rvW.copy(rvS).addScaledVector(dir, d);
+  basisQuat(rvD.subVectors(rvS, rvE).normalize(), rvA, rqU);
+  basisQuat(rvD.subVectors(rvE, rvW).normalize(), rvA, rqF);
+  rUpper.quaternion.slerp(rqT.copy(rqP).invert().multiply(rqU), w);
+  rFore.quaternion.slerp(rqT.copy(rqU).invert().multiply(rqF), w);
+  rHand.quaternion.slerp(rqT.copy(rqF).invert().multiply(rqH), w);
 }

@@ -138,8 +138,9 @@ function gripQuat(axis){
 }
 const wristGuess = new V3(); let wristInit = false;
 const restPivot = new V3();
-const Y_AX = new V3(0, 1, 0), spinC = new V3();
-const SPIN_PIV = (() => { scene.updateMatrixWorld(true); return armPivot.worldToLocal(scene.getObjectByName('RightFoot').getWorldPosition(new V3())); })();   // spin pivot, ArmPivot space
+const Y_AX = new V3(0, 1, 0), Y_AX0 = new V3(), spinC = new V3();
+let twoW = 0;                                   // two-handed guard weight (combat and running)
+const guardD = new V3(), guardD0 = guardPoint(new V3(), 0, 0, new V3());
 
 /* ================= FRAME ================= */
 function step(raw){
@@ -149,7 +150,7 @@ function step(raw){
   runBlend += ((loopMode === 'run' ? 1 : 0) - runBlend) * Math.min(1, dt * 6);
   const ph = T * 9;
   const iP = { y: GRIP_H + 0.025 * Math.sin(T * 1.7), tilt: -0.05 + 0.02 * Math.sin(T * 0.9), roll: -0.13 + 0.02 * Math.sin(T * 1.3), yaw: 0 };
-  const rP = { y: GRIP_H - 0.12 + 0.05 * Math.abs(Math.sin(ph)), tilt: -1.05 + 0.06 * Math.sin(ph), roll: 0.1 + 0.07 * Math.sin(ph / 2), yaw: 0.07 * Math.sin(ph / 2) };
+  const rP = { y: GRIP_H - 0.12 + 0.05 * Math.abs(Math.sin(ph)), tilt: -1.5 + 0.06 * Math.sin(ph), roll: -0.12 + 0.07 * Math.sin(ph / 2), yaw: 0.07 * Math.sin(ph / 2) };
   const b = runBlend;
   const L = { y: iP.y + (rP.y - iP.y) * b, tilt: iP.tilt + (rP.tilt - iP.tilt) * b, roll: iP.roll + (rP.roll - iP.roll) * b, yaw: rP.yaw * b };
 
@@ -157,11 +158,18 @@ function step(raw){
   let A = null, k = 0;
   if (action) { action.t += dt; k = Math.min(1, action.t / action.def.dur); A = sampleG(CH_DEF, action.def.keys, k); }
   const w = A ? A.w : 0;
+  const twoT = gwLin > 0.5 && ((action && action.name !== 'on' && action.name !== 'off' && action.name !== 'slide') || loopMode === 'run') ? 1 : 0;   // the slide stays one-handed
+  twoW += (twoT - twoW) * Math.min(1, dt * 7);
+  const tiltNow = L.tilt + (A ? (A.tilt - L.tilt) * w : 0);
+  const tw = twoW * sstep(0, 1, gwLin) * sstep(0.8, 1.35, -tiltNow);   // the body steps in behind the shaft only once it is nearly level
   root.position.set(A ? A.dx : 0, L.y + (A ? A.dy : 0), 0);
   yawG.rotation.y = L.yaw + (A ? A.yaw : 0);
+  // guard: the body keeps its place, the spear comes in front of it (the hips move in ArmPivot space, so the root moves back)
+  guardD.subVectors(guardPoint(Y_AX0, tw, runBlend, guardD), guardD0).applyAxisAngle(Y_AX, yawG.rotation.y);
+  root.position.sub(guardD); root.position.y += GUARD.dy * tw;
   const spin = A ? A.spin : 0;
   if (spin) {   // turn the whole hero (spear root and body) about his right foot
-    spinC.copy(SPIN_PIV).applyAxisAngle(Y_AX, yawG.rotation.y).add(root.position);
+    spinC.copy(guardPoint(LEG_REST.Right.ank, tw, runBlend, spinC)).applyAxisAngle(Y_AX, yawG.rotation.y).add(root.position);
     root.position.sub(spinC).applyAxisAngle(Y_AX, spin).add(spinC); yawG.rotation.y += spin;
   }
   tiltG.rotation.set(L.roll + (A ? (A.roll - L.roll) * w : 0), 0, L.tilt + (A ? (A.tilt - L.tilt) * w : 0));
@@ -257,7 +265,7 @@ function step(raw){
   armPivot.position.lerpVectors(restPivot, root.position, gw);
   armPivot.rotation.y = yawG.rotation.y * gw;
   armPivot.updateMatrixWorld(true);
-  animateBody(dt, T, ph, runBlend, action ? action.name : null, k);   // legs, torso, living arm
+  animateBody(dt, T, ph, runBlend, action ? action.name : null, k, tw);   // legs, torso, living arm
   armPivot.updateMatrixWorld(true);
   shoulderG.getWorldQuaternion(qS);
   const S = wpos(shoulderG);
@@ -291,6 +299,7 @@ function step(raw){
   forearm.quaternion.copy(qU).invert().multiply(qF);
   hand.quaternion.copy(qF).invert().multiply(qH);
   gripFollow();
+  armPivot.updateMatrixWorld(true); solveRightHand(tw);   // living hand on the shaft behind the cyber fist
 
   // fingers: open while reaching, wrap the shaft on arrival, clench on command
   const g2 = sstep(0.55, 1, gwLin);

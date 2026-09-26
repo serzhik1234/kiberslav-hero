@@ -146,8 +146,8 @@ function step(raw){
   // loop poses
   runBlend += ((loopMode === 'run' ? 1 : 0) - runBlend) * Math.min(1, dt * 6);
   const ph = T * 9;
-  const iP = { y: 1.12 + 0.025 * Math.sin(T * 1.7), tilt: -0.05 + 0.02 * Math.sin(T * 0.9), roll: -0.13 + 0.02 * Math.sin(T * 1.3), yaw: 0 };
-  const rP = { y: 1.0 + 0.05 * Math.abs(Math.sin(ph)), tilt: -1.05 + 0.06 * Math.sin(ph), roll: 0.1 + 0.07 * Math.sin(ph / 2), yaw: 0.07 * Math.sin(ph / 2) };
+  const iP = { y: GRIP_H + 0.025 * Math.sin(T * 1.7), tilt: -0.05 + 0.02 * Math.sin(T * 0.9), roll: -0.13 + 0.02 * Math.sin(T * 1.3), yaw: 0 };
+  const rP = { y: GRIP_H - 0.12 + 0.05 * Math.abs(Math.sin(ph)), tilt: -1.05 + 0.06 * Math.sin(ph), roll: 0.1 + 0.07 * Math.sin(ph / 2), yaw: 0.07 * Math.sin(ph / 2) };
   const b = runBlend;
   const L = { y: iP.y + (rP.y - iP.y) * b, tilt: iP.tilt + (rP.tilt - iP.tilt) * b, roll: iP.roll + (rP.roll - iP.roll) * b, yaw: rP.yaw * b };
 

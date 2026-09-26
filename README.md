@@ -4,7 +4,7 @@
 плазменное копьё, кибер-рука, тело с рубахой, ушанкой, поясом с батареями, наколенниками и лаптями.
 Всё строится кодом (three.js r128), текстуры — пиксельные DataTexture 8–64 px, генерируются тоже кодом.
 
-![этап 2](docs/hero_stage2.png)
+![этап 2.1](docs/hero_stage2_1.png)
 
 ## Быстрый старт
 
@@ -35,7 +35,7 @@ docs/           листы рендеров
 
 ```
 ArmPivot > ArmFrame > Hips > Spine > Chest > Neck > Head > HeadMesh > (Face, Beard, Ushanka)
-Chest > RightShoulder > RightUpperArm > RightForearm > RightHand > RightFist > RightThumb
+Chest > RightShoulder > RightUpperArm (RightSleeve) > RightForearm > RightHand > RightFist > RightThumb
 Chest > Shoulder > UpperArm > Forearm > Hand > Finger1..4_1..3, Thumb_1..2, Grip > Spear
 Hips > Left/RightUpLeg > Left/RightLeg > Left/RightFoot
 SpearRoot > yaw > tilt > SpearTarget   (невидимый контроллер: к нему тянется IK кибер-руки)
@@ -49,8 +49,8 @@ SpearRoot > yaw > tilt > SpearTarget   (невидимый контроллер:
 cd tools/render
 npm install            # three@0.128.0, gl@8 (нужны build-essential, libxi-dev, libglu1-mesa-dev)
 mkdir -p out
-xvfb-run -a node render.js "$(cat jobs/stage2.json)"
-python3 topng.py out/n1 out/n2 out/n3 out/n4      # нужен Pillow
+xvfb-run -a node render.js "$(cat jobs/stage2_1.json)"
+python3 topng.py out/m1 out/m2 out/m3 out/m4      # нужен Pillow
 ```
 
 Описание кадра в JSON: `out`, `arm`, `plasma`, `tier`, `armAct`, `act`, `t` (секунды), `cam` {theta, phi, r, tx, ty, tz}.
@@ -60,5 +60,6 @@ python3 topng.py out/n1 out/n2 out/n3 out/n4      # нужен Pillow
 - [x] Копьё, кибер-рука, анимации копья и руки
 - [x] Этап 1: пропорции, хват копья механической рукой
 - [x] Этап 2: голова, борода, ушанка, корпус и рубаха
+- [x] Этап 2.1: пропорции (бедро 0.42 → 0.65, подол до верха бедра, от подола до стопы 41 % роста), лицо +20 %, ушанка −15 %, мех и борода разведены по цвету и фактуре, рукав с вышивкой у плеча и манжетой, вышитое кольцо ворота и прямые полосы разреза, складки на груди, мягче ключевой свет, копьё в стойке без пересечений с телом
 - [ ] Следующие этапы: руки, пояс, ноги; затем анимации тела
 - [ ] Перенос в Blender (bpy) → FBX/GLB для Unity

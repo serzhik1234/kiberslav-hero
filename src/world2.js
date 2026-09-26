@@ -60,7 +60,7 @@ function paulShell(rIn, rOut, a0, a1, seg, depth, uvK){
   return g;
 }
 const pauldron = new THREE.Group(); pauldron.name = 'Pauldron';
-pauldron.position.set(0.035, 0.03, 0); pauldron.rotation.z = -0.22; shoulderG.add(pauldron);
+pauldron.position.set(0.035, 0.03, 0); pauldron.rotation.set(0, -0.6, -0.22); shoulderG.add(pauldron);   // turned ~35° to the front: the ornament faces the viewer, as on the reference
 const PR = 0.175, PA0 = -0.62, PA1 = 2.12;
 const shell = put(pauldron, paulShell(PR - 0.03, PR, PA0, PA1, 7, 0.34, 4), mSteel);
 // servo housing that fills the shell (reads as a solid shoulder from the front)
@@ -81,9 +81,9 @@ put(pauldron, new THREE.BoxGeometry(0.03, 0.02, 0.36), mRust, Math.cos(1.45) * (
 const PAo = 0.62;
 const ornG = new THREE.Group(); ornG.rotation.order = 'ZYX'; ornG.rotation.set(0, Math.PI / 2, PAo);
 ornG.position.set(Math.cos(PAo) * (PR + 0.004), Math.sin(PAo) * (PR + 0.004), 0); pauldron.add(ornG);
-const ornBack = put(ornG, new THREE.BoxGeometry(0.142, 0.142, 0.014), mRust, 0, 0, 0.004); 
-const boss = put(ornG, new THREE.BoxGeometry(0.128, 0.128, 0.016), [mSteel, mSteel, mSteel, mSteel, mOrn, mSteel], 0, 0, 0.012);
-for (let k = 0; k < 4; k++) { const ph = k * Math.PI / 2; put(ornG, new THREE.BoxGeometry(0.016, 0.016, 0.02), mMetal, Math.cos(ph + Math.PI / 4) * 0.087, Math.sin(ph + Math.PI / 4) * 0.087, 0.014); }
+const ornBack = put(ornG, new THREE.BoxGeometry(0.172, 0.172, 0.014), mRust, 0, 0, 0.004);
+const boss = put(ornG, new THREE.BoxGeometry(0.156, 0.156, 0.016), [mSteel, mSteel, mSteel, mSteel, mOrn, mSteel], 0, 0, 0.012);
+for (let k = 0; k < 4; k++) { const ph = k * Math.PI / 2; put(ornG, new THREE.BoxGeometry(0.016, 0.016, 0.02), mMetal, Math.cos(ph + Math.PI / 4) * 0.105, Math.sin(ph + Math.PI / 4) * 0.105, 0.014); }
 arcNodes.push({ o: boss, order: 0.02 });
 
 /* ---------- upper arm ---------- */

@@ -132,11 +132,11 @@ const scene = new THREE.Scene();
 scene.background = bgTex;
 scene.fog = new THREE.Fog(0x17122a, 6, 15);
 const camera = new THREE.PerspectiveCamera(40, 1, 0.05, 60);
-const cam = { theta: 2.25, phi: 1.33, r: 5.0, tx: -0.1, ty: 1.2, tz: 0.3, auto: !reduceMotion, dragging: false };
+const cam = { theta: 2.25, phi: 1.33, r: 5.4, tx: -0.25, ty: 1.4, tz: 0.4, auto: !reduceMotion, dragging: false };
 
 /* ---------- lights ---------- */
-scene.add(new THREE.HemisphereLight(0xd3d9ff, 0x2a2018, 0.78));
-const sun = new THREE.DirectionalLight(0xffe2c4, 0.95);
+scene.add(new THREE.HemisphereLight(0xd3d9ff, 0x2a2018, 0.72));
+const sun = new THREE.DirectionalLight(0xffe2c4, 0.78);        // softer key: top faces of linen and fur stay beige, not white
 sun.position.set(3, 6, 2.5); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
 Object.assign(sun.shadow.camera, { left: -3.5, right: 3.5, top: 3.5, bottom: -3.5, near: 1, far: 16 });
 scene.add(sun);

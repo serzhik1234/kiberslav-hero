@@ -70,13 +70,21 @@ window.run = function(){
 
   // ---- geometry: every visible opaque mesh of the hero, baked into export space, merged by material ----
   const visible = o => { for (let p = o; p; p = p.parent) if (!p.visible) return false; return true; };
-  const groups = new Map();      // material -> {mat, parts: []}
+  // body parts, by the bone a mesh hangs on: each part becomes its own object in Blender
+  const PART_OF = name => /^(Neck|Head)$/.test(name) ? 'Head'
+    : /^Right(Shoulder|Arm|ForeArm|Hand)$/.test(name) ? 'ArmRight'
+    : /^Left(Shoulder|Arm|ForeArm|Hand)/.test(name) ? 'ArmLeft_Cyber'
+    : /^Left(UpLeg|Leg|Foot)$/.test(name) ? 'LegLeft'
+    : /^Right(UpLeg|Leg|Foot)$/.test(name) ? 'LegRight'
+    : name === 'Spear' ? 'Spear' : 'Torso';
+  const groups = new Map();      // part|material -> {part, mat, parts: []}
   let skipped = 0;
   M0.ArmPivot = W0.scene.getObjectByName('ArmPivot');
   M0.ArmPivot.traverse(o => {
     if (!o.isMesh || o.isSkinnedMesh || !visible(o)) return;
     let b = o; while (b && !bySrc[b.name]) b = b.parent;
     const bone = b ? bySrc[b.name].i + 1 : 0;                   // +1: bone 0 is Root
+    const part = PART_OF(b ? bySrc[b.name].name : 'Root');
     const mats = Array.isArray(o.material) ? o.material : [o.material];
     let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
     const M = new M4().multiplyMatrices(TEXP, o.matrixWorld);
@@ -86,16 +94,17 @@ window.run = function(){
     for (const rg of ranges) {
       const mat = mats[rg.materialIndex || 0];
       if (!mat || mat.transparent || mat.visible === false) { skipped++; continue; }
-      if (!groups.has(mat)) groups.set(mat, { mat, parts: [] });
-      groups.get(mat).parts.push({ g, start: rg.start, count: rg.count, bone, flip });
+      const key = part + '|' + mat.uuid;
+      if (!groups.has(key)) groups.set(key, { part, mat, parts: [] });
+      groups.get(key).parts.push({ g, start: rg.start, count: rg.count, bone, flip });
     }
   });
 
-  // one skinned mesh per material, all on one skeleton (a multi-material glTF mesh shares its vertex buffers,
-  // which Blender's importer would duplicate for every primitive); to_fbx.py joins them into one object
-  const matList = [], geos = []; let tris = 0;
+  // one skinned mesh per part and material, all on one skeleton (a multi-material glTF mesh shares its vertex
+  // buffers, which Blender's importer would duplicate for every primitive); to_fbx.py joins them per part
+  const matList = [], geos = [], names = [], clones = new Map(); let tris = 0;
   const va = new V3(), vb = new V3(), vc = new V3(), n = new V3();
-  for (const { mat, parts } of groups.values()) {
+  for (const { part, mat, parts } of groups.values()) {
     const P = [], N = [], UV = [], C = [], SI = [], SW = [];
     for (const { g, start: s0, count, bone, flip } of parts) {
       const pos = g.attributes.position, uv = g.attributes.uv, col = g.attributes.color;
@@ -111,8 +120,8 @@ window.run = function(){
         }
       }
     }
-    const m = mat.clone(); m.skinning = true;
-    if (!m.name) m.name = 'M' + matList.length;
+    if (!clones.has(mat)) { const c = mat.clone(); c.skinning = true; if (!c.name) c.name = 'M' + clones.size; clones.set(mat, c); }
+    const m = clones.get(mat);
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
     geo.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
@@ -120,7 +129,7 @@ window.run = function(){
     geo.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
     geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(SI, 4));
     geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(SW, 4));
-    matList.push(m); geos.push(geo); tris += P.length / 9;
+    matList.push(m); geos.push(geo); names.push('Part_' + part + '__' + m.name); tris += P.length / 9;
   }
 
   // ---- skeleton at the bind pose ----
@@ -131,7 +140,7 @@ window.run = function(){
   const scene = new THREE.Scene();
   scene.add(root); scene.updateMatrixWorld(true);
   const skeleton = new THREE.Skeleton([root, ...bones]);
-  geos.forEach((g, i) => { const m = new THREE.SkinnedMesh(g, matList[i]); m.name = 'Kiberslav_' + matList[i].name; scene.add(m); m.bind(skeleton); });
+  geos.forEach((g, i) => { const m = new THREE.SkinnedMesh(g, matList[i]); m.name = names[i]; scene.add(m); m.bind(skeleton); });
 
   // ---- clips: sampled from the running prototype ----
   const A = W0.ACTIONS;
@@ -174,7 +183,7 @@ window.run = function(){
   return new Promise(res => new THREE.GLTFExporter().parse(scene, glb => {
     const u8 = new Uint8Array(glb); let s = '';
     for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
-    res({ glb: btoa(s), stats: { tris, materials: matList.length, bones: bones.length + 1, clips: clips.map(c => c.name + ' ' + c.duration.toFixed(2) + 's'), skipped } });
+    res({ glb: btoa(s), stats: { tris, materials: clones.size, meshes: geos.length, bones: bones.length + 1, clips: clips.map(c => c.name + ' ' + c.duration.toFixed(2) + 's'), skipped } });
   }, { binary: true, animations: clips, onlyVisible: false }));
 };
 </script></body></html>`;
